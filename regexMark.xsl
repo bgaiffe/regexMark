@@ -4,9 +4,11 @@
 
   <!-- marquage de matching de regex dans un arbre xml.... -->
 
-  <xsl:param name="motif">ab</xsl:param>
+  <xsl:param name="motif">a+</xsl:param>
 
-  
+
+  <!-- le problème est de ne pas chercher à couvrir tous les noeuds texte intermédiaires !
+       On met un seul span et une seule anchor par match.... -->
  
 
   <xsl:function name="atilf:getMatches" as="xs:integer*">
@@ -25,10 +27,10 @@
     </xsl:variable>
     
     <!-- our result : indexOfMatch lengthOfMatch indexOfMatch lengthOfMatch, etc... -->
-  
+
     <xsl:for-each select="$matchLengths">
       <xsl:variable name="i" select="position()"/>
-      <xsl:value-of select="sum(for $j in 1 to $i return $notMatchLengths[$j])+1+sum(for $j in 1 to $i -1 return $matchLengths[$i])"/>
+      <xsl:value-of select="sum(for $j in 1 to $i return $notMatchLengths[$j])+1+sum(for $j in 1 to ($i -1) return $matchLengths[$j])"/>
       <xsl:value-of select="."/>
     </xsl:for-each>
   
@@ -58,29 +60,27 @@
 	    <xsl:for-each select="@*">
 	      <xsl:copy/>
 	    </xsl:for-each>
-	    <xsl:sequence select="atilf:marqueMatchSeqNoeuds($nd/node(), $debutMatch, $lgMatch, $key)"/>
+	    <xsl:sequence select="atilf:marquerMatchSeqNoeuds($nd/node(), $debutMatch, $lgMatch, $key)"/>
 	  </xsl:copy>
 	</xsl:for-each>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:function>
+  
 
-  <xsl:function name="atilf:marqueMatchSeqNoeuds">
+  <xsl:function name="atilf:marquerMatchSeqNoeuds">
     <xsl:param name="seqNds"/>
     <xsl:param name="debutMatch"/>
     <xsl:param name="lgMatch"/>
     <xsl:param name="key"/>
     
-    <!-- <xsl:message><xsl:text>atilf:marqueMatchSeqNoeuds([</xsl:text>
-    <xsl:for-each select="$seqNds">
-      <xsl:copy-of select="."/>
-      <xsl:if test="not(position() = last())">
-	<xsl:text>, </xsl:text>
-      </xsl:if>
-    </xsl:for-each>
-    <xsl:text>], </xsl:text><xsl:value-of select="$debutMatch"/><xsl:text>, </xsl:text>
-    <xsl:value-of select="$lgMatch"/><xsl:text>)&#x0a;</xsl:text>
-    </xsl:message> -->
+
+    <!-- <xsl:message><xsl:text>atilf:marqueMatchSeqNoeuds(</xsl:text>
+    <xsl:copy-of select="$seqNds"/><xsl:text>, </xsl:text>
+    <xsl:value-of select="$debutMatch"/><xsl:text>, </xsl:text>
+    <xsl:value-of select="$lgMatch"/><xsl:text>)</xsl:text></xsl:message> -->
+    
+    
     <!-- on veut connaître la taille du premier élément de la sequence -->
     <xsl:variable name="contenuPrem">
       <xsl:value-of select="$seqNds[1]"/>
@@ -103,8 +103,8 @@
 	  <xsl:otherwise>
 	    <!-- <xsl:message>fin pas dans premier</xsl:message> -->
 	    <!-- on insère ce qu'on peut dans le premier noeud et on continue... -->
-	    <xsl:sequence select="atilf:marquerMatchNoeud($seqNds[1], $debutMatch, $lgPrem -$debutMatch +1, $key)"/>
-	    <xsl:sequence select="atilf:marqueMatchSeqNoeuds($seqNds[position() &gt; 1], 1, $lgMatch -$lgPrem, $key)"/>
+	    <xsl:sequence select="atilf:marquerSpanNoeud($seqNds[1], $debutMatch, generate-id($seqNds[1]), $key)"/>
+	    <xsl:sequence select="atilf:marquerAnchorSeqNoeuds($seqNds[position() &gt; 1], $lgMatch -$lgPrem +1, generate-id($seqNds[1]), $key)"/>
 	  </xsl:otherwise>
 	</xsl:choose>
       </xsl:when>
@@ -113,15 +113,117 @@
       <xsl:otherwise>
 	<!-- on avance d'un cran... -->
 	<xsl:sequence select="$seqNds[1]"/>
-	<xsl:sequence select="atilf:marqueMatchSeqNoeuds($seqNds[position() &gt; 1], $debutMatch -$lgPrem, $lgMatch, $key)"/>
+	<xsl:sequence select="atilf:marquerMatchSeqNoeuds($seqNds[position() &gt; 1], $debutMatch -$lgPrem, $lgMatch, $key)"/>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:function>
 
+  <xsl:function name="atilf:marquerSpanNoeud">
+    <xsl:param name="nd" as="node()"/>
+    <xsl:param name="debutMatch"/>
+    <xsl:param name="id"/>
+    <xsl:param name="key"/>
+
+   
+	<xsl:choose>
+	  <xsl:when test="$nd/self::text()">
+	    <xsl:value-of select="substring($nd, 1, $debutMatch -1)"/>
+	    <span to="{concat('#a_', $id)}" xml:id="{concat('s_',$id)}" key="{$key}"/>
+	    <xsl:value-of select="substring($nd, $debutMatch)"/>
+	  </xsl:when>
+	  <xsl:otherwise>
+	     <xsl:for-each select="$nd">
+	       <xsl:copy>
+		 <xsl:for-each select="@*">
+		   <xsl:copy/>
+		 </xsl:for-each>
+		 <xsl:copy-of select="atilf:marquerSpanSeqNoeuds($nd/node(), $debutMatch, $id, $key)"/>
+	       </xsl:copy>
+	     </xsl:for-each>
+	  </xsl:otherwise>
+	</xsl:choose>
+
+  </xsl:function>
+
+  <xsl:function name="atilf:marquerSpanSeqNoeuds">
+    <xsl:param name="seqNds" as="node()*"/>
+    <xsl:param name="debutMatch"/>
+    <xsl:param name="id"/>
+    <xsl:param name="key"/>
+    
+    <xsl:variable name="contenuPrem">
+      <xsl:value-of select="$seqNds[1]"/>
+    </xsl:variable>
+    <xsl:variable name="lgPrem" select="string-length($contenuPrem)"/>
+    <xsl:choose>
+      <xsl:when test="$debutMatch &lt;= $lgPrem">
+	<xsl:sequence select="atilf:marquerSpanNoeud($seqNds[1], $debutMatch, $id, $key)"/>
+      </xsl:when>
+      <xsl:otherwise>
+	<!-- on avance d'un cran... -->
+	<xsl:sequence select="$seqNds[1]"/>
+	<xsl:sequence select="atilf:marquerSpanSeqNoeuds($seqNds[position() &gt; 1], $debutMatch -$lgPrem, $id, $key)"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+  
+  <xsl:function name="atilf:marquerAnchorSeqNoeuds">
+    <xsl:param name="seqNds" as="node()*"/>
+    <xsl:param name="index"/>
+    <xsl:param name="id"/>
+    <xsl:param name="key"/>
+
+    <xsl:variable name="contenuPrem">
+      <xsl:value-of select="$seqNds[1]"/>
+    </xsl:variable>
+    <xsl:variable name="lgPrem" select="string-length($contenuPrem)"/>
+    <xsl:choose>
+      <xsl:when test="$index &lt;= $lgPrem">
+	<xsl:sequence select="atilf:marquerAnchorNoeud($seqNds[1], $index, $id, $key)"/>
+	<xsl:sequence select="$seqNds[position() &gt; 1]"/>
+      </xsl:when>
+      <xsl:otherwise>
+	<xsl:sequence select="$seqNds[1]"/>
+	<xsl:sequence select="atilf:marquerAnchorSeqNoeuds($seqNds[position() &gt; 1], $index -$lgPrem, $id, $key)"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <xsl:function name="atilf:marquerAnchorNoeud">
+    <xsl:param name="nd"/>
+    <xsl:param name="index"/>
+    <xsl:param name="id"/>
+    <xsl:param name="key"/>
+    
+   
+	<xsl:choose>
+	  <xsl:when test="$nd/self::text()">
+	    <xsl:value-of select="substring($nd, 1, $index -1)"/>
+	    <anchor xml:id="{concat('a_',$id)}" key="{$key}"/>
+	    <xsl:value-of select="substring($nd, $index)"/>
+	  </xsl:when>
+	  <xsl:otherwise>
+	    <xsl:for-each select="$nd">
+	      <xsl:copy>
+		<xsl:for-each select="@*">
+		  <xsl:copy/>
+		</xsl:for-each>
+		<xsl:copy-of select="atilf:marquerAnchorSeqNoeuds($nd/node(), $index, $id, $key)"/>
+	      </xsl:copy>
+	    </xsl:for-each>
+	  </xsl:otherwise>
+	</xsl:choose>
+  </xsl:function>
+
+    
   <xsl:function name="atilf:markSomeMatches">
     <xsl:param name="nd" as="node()"/>
     <xsl:param name="matches" as="xs:integer*"/>
     <xsl:param name="key"/>
+
+    <!--<xsl:message><xsl:text>atilf:markSomeMatches(</xsl:text>
+    <xsl:copy-of select="$nd"/><xsl:text>, </xsl:text>
+    <xsl:value-of select="$matches"/><xsl:text>)</xsl:text></xsl:message> -->
     
     <xsl:choose>
       <xsl:when test="count($matches) = 0">
@@ -144,7 +246,7 @@
     </xsl:variable>
     <xsl:variable name="matches" select="atilf:getMatches($contenu, $pattern)"/>
 
-    <!-- <xsl:message>debut : <xsl:value-of select="$iDeb"/> longueur : <xsl:value-of select="$lgMatch"/></xsl:message> -->
+    <!-- <xsl:message><xsl:text>Matches : </xsl:text><xsl:value-of select="$matches"/></xsl:message>  -->
     
     <xsl:copy-of select="atilf:markSomeMatches($node, $matches, $key)"/>
   </xsl:function>
