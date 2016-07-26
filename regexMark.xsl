@@ -4,7 +4,7 @@
 
   <!-- marquage de matching de regex dans un arbre xml.... -->
 
-  <xsl:param name="motif">a+</xsl:param>
+  <xsl:param name="motif">y vind\w+</xsl:param>
 
 
   <!-- le problème est de ne pas chercher à couvrir tous les noeuds texte intermédiaires !
@@ -75,8 +75,14 @@
     <xsl:param name="key"/>
     
 
-    <!-- <xsl:message><xsl:text>atilf:marqueMatchSeqNoeuds(</xsl:text>
-    <xsl:copy-of select="$seqNds"/><xsl:text>, </xsl:text>
+    <!-- <xsl:message><xsl:text>atilf:marqueMatchSeqNoeuds([</xsl:text>
+    <xsl:for-each select="$seqNds">
+      <xsl:copy-of select="."/>
+      <xsl:if test="not(position() = last())">
+	<xsl:text>, </xsl:text>
+      </xsl:if>
+    </xsl:for-each>
+    <xsl:text>]</xsl:text>
     <xsl:value-of select="$debutMatch"/><xsl:text>, </xsl:text>
     <xsl:value-of select="$lgMatch"/><xsl:text>)</xsl:text></xsl:message> -->
     
@@ -91,20 +97,20 @@
 
       <!-- est-ce que debutMatch est dedans ? -->
       <xsl:when test="$debutMatch &lt;= $lgPrem">
-	<!-- <xsl:message>Début dans premier</xsl:message>-->
+	<!-- <xsl:message>Début dans premier</xsl:message> -->
 	<xsl:choose>
 
 	  <!-- est-ce que la fin est aussi dedans ? -->
 	  <xsl:when test="$debutMatch+$lgMatch -1 &lt;= $lgPrem">
-	    <!-- <xsl:message>fin dans premier</xsl:message>-->
+	    <!-- <xsl:message>fin dans premier</xsl:message> -->
 	    <xsl:sequence select="atilf:marquerMatchNoeud($seqNds[1], $debutMatch, $lgMatch, $key)"/>
 	    <xsl:sequence select="$seqNds[position() &gt; 1]"/>
 	  </xsl:when>
 	  <xsl:otherwise>
-	    <!-- <xsl:message>fin pas dans premier</xsl:message> -->
+	    <!-- <xsl:message>fin pas dans premier</xsl:message>-->
 	    <!-- on insère ce qu'on peut dans le premier noeud et on continue... -->
 	    <xsl:sequence select="atilf:marquerSpanNoeud($seqNds[1], $debutMatch, generate-id($seqNds[1]), $key)"/>
-	    <xsl:sequence select="atilf:marquerAnchorSeqNoeuds($seqNds[position() &gt; 1], $lgMatch -$lgPrem +1, generate-id($seqNds[1]), $key)"/>
+	    <xsl:sequence select="atilf:marquerAnchorSeqNoeuds($seqNds[position() &gt; 1], $lgMatch - $lgPrem +$debutMatch, generate-id($seqNds[1]), $key)"/>
 	  </xsl:otherwise>
 	</xsl:choose>
       </xsl:when>
@@ -173,6 +179,13 @@
     <xsl:param name="id"/>
     <xsl:param name="key"/>
 
+    <!-- <xsl:message>
+      <xsl:text>atilf:marquerAnchorSeqNoeuds(</xsl:text>
+      <xsl:copy-of select="$seqNds"/>
+      <xsl:text>, </xsl:text>
+      <xsl:value-of select="$index"/>
+      <xsl:text>)</xsl:text>
+    </xsl:message>-->
     <xsl:variable name="contenuPrem">
       <xsl:value-of select="$seqNds[1]"/>
     </xsl:variable>
