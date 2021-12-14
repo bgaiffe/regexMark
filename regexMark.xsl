@@ -7,7 +7,7 @@
   <xsl:param name="motif">a+</xsl:param>
 
 
-  <xsl:variable name="debug" as="xs:boolean">false</xsl:variable>
+  <xsl:variable name="debug" as="xs:boolean">true</xsl:variable>
   
 
   <xsl:function name="atilf:getMatches" as="xs:integer*">
@@ -166,7 +166,7 @@
 	</xsl:choose>
     </xsl:variable>
     <xsl:if test="$debug">
-      <xsl:message>On renvoie : <xsl:copy-of select="$res"/></xsl:message>
+      <xsl:message>On renvoie[spanNoeud] : <xsl:copy-of select="$res"/></xsl:message>
     </xsl:if>
     <xsl:sequence select="$res"/>
   </xsl:function>
@@ -179,7 +179,7 @@
 
     <xsl:if test="$debug">
       <xsl:message><xsl:text>atilf:marquerSpanSeqNoeuds(</xsl:text>
-      <xsl:value-of select="$seqNds"/><xsl:text>, </xsl:text>
+      <xsl:copy-of select="$seqNds"/><xsl:text>, </xsl:text>
       <xsl:value-of select="$debutMatch"/>
       <xsl:text>)</xsl:text>
       </xsl:message>
@@ -191,16 +191,26 @@
       <xsl:value-of select="$seqNds[1]"/>
     </xsl:variable>
     <xsl:variable name="lgPrem" select="string-length($contenuPrem)"/>
-    <xsl:choose>
-      <xsl:when test="$debutMatch &lt;= $lgPrem">
-	<xsl:sequence select="atilf:marquerSpanNoeud($seqNds[1], $debutMatch, $id, $key)"/>
-      </xsl:when>
-      <xsl:otherwise>
-	<!-- on avance d'un cran... -->
-	<xsl:sequence select="$seqNds[1]"/>
-	<xsl:sequence select="atilf:marquerSpanSeqNoeuds($seqNds[position() &gt; 1], $debutMatch -$lgPrem, $id, $key)"/>
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:variable name="res">
+      <xsl:choose>
+	<xsl:when test="$debutMatch &lt;= $lgPrem">
+	  <xsl:sequence select="atilf:marquerSpanNoeud($seqNds[1], $debutMatch, $id, $key)"/>
+	  <!-- ben, et les autres ? -->
+	  <xsl:sequence select="$seqNds[position() &gt; 1]"/>
+	</xsl:when>
+	<xsl:otherwise>
+	  <!-- on avance d'un cran... -->
+	  <xsl:sequence select="$seqNds[1]"/>
+	  <xsl:sequence select="atilf:marquerSpanSeqNoeuds($seqNds[position() &gt; 1], $debutMatch -$lgPrem, $id, $key)"/>
+	</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:if test="$debug">
+      <xsl:message><xsl:text>on renvoie[marquerSpanSeqNoeuds(</xsl:text><xsl:copy-of select="$seqNds"/><xsl:text>, </xsl:text><xsl:value-of select="$debutMatch"/><xsl:text>)] = </xsl:text>
+      <xsl:copy-of select="$res"/>
+      </xsl:message>
+    </xsl:if>
+    <xsl:copy-of select="$res"/>
   </xsl:function>
   
   <xsl:function name="atilf:marquerAnchorSeqNoeuds">
