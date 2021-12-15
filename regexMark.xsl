@@ -7,7 +7,7 @@
   <xsl:param name="motif">a+</xsl:param>
 
 
-  <xsl:variable name="debug" as="xs:boolean">true</xsl:variable>
+  <xsl:variable name="debug" as="xs:boolean">false</xsl:variable>
   
 
   <xsl:function name="atilf:getMatches" as="xs:integer*">
