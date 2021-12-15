@@ -228,19 +228,25 @@
 	<xsl:text>)</xsl:text>
       </xsl:message>
     </xsl:if>
-    
-    <xsl:variable name="contenuPrem">
-      <xsl:value-of select="$seqNds[1]"/>
-    </xsl:variable>
-    <xsl:variable name="lgPrem" select="string-length($contenuPrem)"/>
     <xsl:choose>
-      <xsl:when test="$index &lt;= $lgPrem">
-	<xsl:sequence select="atilf:marquerAnchorNoeud($seqNds[1], $index, $id, $key)"/>
-	<xsl:copy-of select="$seqNds[position() &gt; 1]"/>
+      <xsl:when test="count($seqNds)=0">
+	<anchor xml:id="{concat('a_',$id)}" key="{$key}"/>
       </xsl:when>
       <xsl:otherwise>
-	<xsl:sequence select="$seqNds[1]"/>
-	<xsl:sequence select="atilf:marquerAnchorSeqNoeuds($seqNds[position() &gt; 1], $index -$lgPrem, $id, $key)"/>
+	<xsl:variable name="contenuPrem">
+	  <xsl:value-of select="$seqNds[1]"/>
+	</xsl:variable>
+	<xsl:variable name="lgPrem" select="string-length($contenuPrem)"/>
+	<xsl:choose>
+	  <xsl:when test="$index &lt;= $lgPrem">
+	    <xsl:sequence select="atilf:marquerAnchorNoeud($seqNds[1], $index, $id, $key)"/>
+	    <xsl:copy-of select="$seqNds[position() &gt; 1]"/>
+	  </xsl:when>
+	  <xsl:otherwise>
+	    <xsl:sequence select="$seqNds[1]"/>
+	    <xsl:sequence select="atilf:marquerAnchorSeqNoeuds($seqNds[position() &gt; 1], $index -$lgPrem, $id, $key)"/>
+	  </xsl:otherwise>
+	</xsl:choose>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:function>
